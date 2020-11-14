@@ -1,0 +1,9 @@
+init
+sub
+root/
+root.img
+vmlinuz
+
+# Added by cargo
+
+/target

@@ -1,0 +1,13 @@
+[package]
+name = "rinit"
+version = "0.1.0"
+authors = ["Tyler Philbrick <t5j6p9@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+libc = "0.2"
+lazy_static = "1"
+nix = "0.19"
+regex = "1"
