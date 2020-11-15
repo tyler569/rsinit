@@ -72,18 +72,18 @@ fn list_dir(name: &str) -> io::Result<()> {
 fn cat(files: &[&str]) -> io::Result<()> {
     for file in files {
         let mut f = File::open(file)?;
-        io::copy(&mut f, &mut io::stdout());
+        io::copy(&mut f, &mut io::stdout())?;
     }
     Ok(())
 }
 
 fn exec(program: &str, args: &[&str]) -> io::Result<()> {
-    let mut c = Command::new(program);
-    c.args(args);
-    let mut child = c.spawn()?;
-    let code = child.wait()?;
-    if !code.success() {
-        eprintln!("{} ran, but indicated failure: {:?}", program, code);
+    let status = Command::new(program)
+        .args(args)
+        .spawn()?
+        .wait()?;
+    if !status.success() {
+        eprintln!("{} ran, but indicated failure: {:?}", program, status);
     }
     Ok(())
 }
@@ -112,7 +112,7 @@ fn do_shell() {
 
     prompt();
     for line in io::stdin().lock().lines() {
-        if let Err(err) = line.map(handle_line) {
+        if let Err(err) = line.and_then(handle_line) {
             eprintln!("err: {:?}", err);
         }
         prompt();

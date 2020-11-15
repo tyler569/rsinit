@@ -12,11 +12,11 @@ root.img: init sub makefile
 	sudo cp sub root/root
 	sudo umount root
 
-init: target/x86_64-unknown-linux-musl/debug/rinit
+init: target/x86_64-unknown-linux-musl/debug/rsinit
 	cp $< $@
 
 sub: target/x86_64-unknown-linux-musl/debug/sub
 	cp $< $@
 
-target/x86_64-unknown-linux-musl/debug/rinit: $(shell find src)
+target/x86_64-unknown-linux-musl/debug/rsinit: $(shell find src)
 	cargo build
