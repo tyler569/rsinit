@@ -61,56 +61,34 @@ fn tokenize(st: &str) -> Vec<&str> {
 
 const DEBUG_SHELL: bool = false;
 
-fn list_dir(name: &str) {
-    if let Ok(entries) = read_dir(name) {
-        for entry in entries {
-            if let Ok(entry) = entry {
-                println!("{}", entry.path().to_str().unwrap());
-            }
-        }
-    } else {
-        println!("error reading {}\n", name);
+fn list_dir(name: &str) -> io::Result<()> {
+    let entries = read_dir(name)?;
+    for entry in entries {
+        println!("{}", entry?.path().to_str().unwrap());
     }
+    Ok(())
 }
 
-fn cat(files: &[&str]) {
+fn cat(files: &[&str]) -> io::Result<()> {
     for file in files {
-        let mut f = match File::open(file) {
-            Ok(f) => f,
-            Err(err) => {
-                eprintln!("error opening {}: {:?}", file, err);
-                continue;
-            }
-        };
-        if let Err(err) = io::copy(&mut f, &mut io::stdout()) {
-            eprintln!("error reading {}: {:?}", file, err);
-        }
+        let mut f = File::open(file)?;
+        io::copy(&mut f, &mut io::stdout());
     }
+    Ok(())
 }
 
-fn exec(program: &str, args: &[&str]) {
+fn exec(program: &str, args: &[&str]) -> io::Result<()> {
     let mut c = Command::new(program);
     c.args(args);
-    let mut child = match c.spawn() {
-        Ok(child) => child,
-        Err(err) => {
-            eprintln!("failed to run {}: {:?}", program, err);
-            return;
-        }
-    };
-    let code = match child.wait() {
-        Ok(code) => code,
-        Err(err) => {
-            eprintln!("failed to wait on {}: {:?}", program, err);
-            return;
-        }
-    };
+    let mut child = c.spawn()?;
+    let code = child.wait()?;
     if !code.success() {
         eprintln!("{} ran, but indicated failure: {:?}", program, code);
     }
+    Ok(())
 }
 
-fn handle_line(line: String) {
+fn handle_line(line: String) -> io::Result<()> {
     let tokens = tokenize(&line);
     if DEBUG_SHELL {
         println!("{:?}", tokens);
@@ -119,11 +97,12 @@ fn handle_line(line: String) {
     if let Some((cmd, args)) = tokens.split_first() {
         match *cmd {
             "echo" => println!("{}", args.join(" ")),
-            "ls" => list_dir(args.first().cloned().unwrap_or(".")),
-            "cat" => cat(args),
-            _ => exec(cmd, args),
+            "ls" => list_dir(args.first().cloned().unwrap_or("."))?,
+            "cat" => cat(args)?,
+            _ => exec(cmd, args)?,
         }
     }
+    Ok(())
 }
 
 fn do_shell() {
@@ -133,10 +112,8 @@ fn do_shell() {
 
     prompt();
     for line in io::stdin().lock().lines() {
-        if let Ok(line) = line {
-            handle_line(line)
-        } else {
-            println!("{:?}", line);
+        if let Err(err) = line.map(handle_line) {
+            eprintln!("err: {:?}", err);
         }
         prompt();
     }
@@ -157,7 +134,7 @@ fn main() {
     println!("remount root: {:?}", rs_mount("/dev/vda", "/", "", MS_REMOUNT));
     println!("mount proc: {:?}", rs_mount("", "/proc", "proc", 0));
 
-    std::env::set_current_dir("/root");
+    assert!(std::env::set_current_dir("/root").is_ok());
 
     do_shell();
 
