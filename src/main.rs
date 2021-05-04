@@ -2,23 +2,14 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::{
     ffi::CString,
-    fs::{read_dir, File},
     io::{self, prelude::*},
     process::Command,
     thread::sleep,
     time::Duration,
 };
 
-//  #define MS_REMOUNT   32      /* Alter flags of a mounted FS */
 const MS_REMOUNT: usize = 32;
 extern "C" {
-    // int mount(
-    //     const char *source,
-    //     const char *target,
-    //     const char *filesystemtype,
-    //     unsigned long mountflags,
-    //     const void *data
-    // );
     fn mount(
         source: *const libc::c_char,
         target: *const libc::c_char,
@@ -61,22 +52,6 @@ fn tokenize(st: &str) -> Vec<&str> {
 
 const DEBUG_SHELL: bool = false;
 
-fn list_dir(name: &str) -> io::Result<()> {
-    let entries = read_dir(name)?;
-    for entry in entries {
-        println!("{}", entry?.path().to_str().unwrap());
-    }
-    Ok(())
-}
-
-fn cat(files: &[&str]) -> io::Result<()> {
-    for file in files {
-        let mut f = File::open(file)?;
-        io::copy(&mut f, &mut io::stdout())?;
-    }
-    Ok(())
-}
-
 fn exec(program: &str, args: &[&str]) -> io::Result<()> {
     let status = Command::new(program)
         .args(args)
@@ -97,8 +72,6 @@ fn handle_line(line: String) -> io::Result<()> {
     if let Some((cmd, args)) = tokens.split_first() {
         match *cmd {
             "echo" => println!("{}", args.join(" ")),
-            "ls" => list_dir(args.first().cloned().unwrap_or("."))?,
-            "cat" => cat(args)?,
             _ => exec(cmd, args)?,
         }
     }
@@ -134,7 +107,7 @@ fn main() {
     println!("remount root: {:?}", rs_mount("/dev/vda", "/", "", MS_REMOUNT));
     println!("mount proc: {:?}", rs_mount("", "/proc", "proc", 0));
 
-    assert!(std::env::set_current_dir("/root").is_ok());
+    std::env::set_current_dir("/root").unwrap();
 
     do_shell();
 

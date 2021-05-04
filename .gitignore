@@ -7,3 +7,5 @@ vmlinuz
 # Added by cargo
 
 /target
+cat
+ls
